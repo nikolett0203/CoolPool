@@ -1,0 +1,26 @@
+body {
+    margin: 0; /* Remove the default margin. */
+    text-align: center; /* Center the content horizontally. */
+    background-color: #0C1F2C;
+    font-family:'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif
+}
+
+h1 {
+    color: #FFFFFF;
+    font-size: 30px;
+}
+
+h2 {
+    color: #81980D;
+    font-size: 20px;
+}
+
+svg#pool-table {
+    display: block; 
+    margin: auto;
+    max-width: 100%;
+}
+
+#coordinates {
+    color: #FFFFFF;
+}

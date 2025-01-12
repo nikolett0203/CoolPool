@@ -1,0 +1,49 @@
+body {
+    background-color: #0C1F2C;
+    font-family:'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif
+}
+
+h1 {
+    color: #81980D;
+    text-align: center;
+    font-size: 48px;
+}
+
+h3 {
+    color: #FFFFFF;
+    text-align: center;
+    font-size: 18px;
+}
+.input-container {
+    display: inline-block; /* Places containers side by side */
+    text-align: left; /* Aligns the text left inside the container */
+    margin: 0 20px; /* Adds some space between the containers */
+}
+input {
+    width: 100%; /* Makes input take up full container width */
+    margin-bottom: 5px; /* Adds space below the input */
+}
+label {
+    display: block; /* Ensures the label is on its own line below the input */
+    color: #81980D;
+    text-align: center;
+    font-size: 14px;
+}
+
+img {
+    display: block;
+    margin-top: 40px; /* Adjust the value to increase/decrease the space */
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.submit-button {
+    margin: 20px auto; /* Center the button and add vertical space */
+    display: block; /* Makes the button a block element to center it with margin */
+    width: 100px; /* Set a specific width to make the button smaller */
+    padding: 1px; /* Add some padding inside the button for a nicer look */
+    border: none; /* Remove the default border */
+    border-radius: 5px; /* Slightly round the corners of the button */
+    cursor: pointer; /* Changes the mouse cursor to a pointer when hovering over the button */
+    font-size: 16px; /* Increase the font size for better readability */
+}

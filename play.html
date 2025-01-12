@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Let's Play Pool!</title>
+    <link rel="stylesheet" href="play.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.3/jquery.min.js"></script>
+    <script>
+
+            let cueX, cueY;   // coordinates of cue ball
+            let follow = false;    // mouse tracking
+            let line = null;    // cue line
+
+            // brute force calculating scale because cue ball location suspiciously untrackable
+            // my lowest point in this assignment for sure
+            function calculateScale() {
+
+                const svg = document.getElementById('pool-table');
+                const svgRect = svg.getBoundingClientRect(); // actual size on screen
+                const viewBox = svg.viewBox.baseVal; // viewBox settings
+                
+                // calc x/y scaling factors
+                const scaleX = svgRect.width / viewBox.width;
+                const scaleY = svgRect.height / viewBox.height;
+                
+                return {scaleX, scaleY};
+            }
+
+            // function to find cueball center
+            function adjustCueBallPosition() {
+
+                // find scaling factors
+                const {scaleX, scaleY} = calculateScale();
+                const cueBall = document.getElementById('cue');
+                
+                // get OG position from svg
+                const cxOG = parseFloat(cueBall.getAttribute('cx'));
+                const cyOG = parseFloat(cueBall.getAttribute('cy'));
+                
+                // multiple by scale
+                cueX = cxOG * scaleX;
+                cueY = cyOG * scaleY;
+
+                // nudge it over a little because it's still off
+                cueX = cueX + 13;
+                cueY = cueY + 10;
+                
+            }
+
+            // initiates mouse tracking on click down
+            function followme() {
+                follow = true;
+                adjustCueBallPosition();
+            }
+
+            // stop mouse tracking, generate velocities, and send http request to server for svgs
+            function stopfollowingme() {
+
+                follow = false;
+
+                var vX;
+                var vY;
+                
+                // idk why i did this 
+                if (line.getAttribute('x1') === null || line.getAttribute('x2') === null) {
+                    vx = 5;
+                    vy = 5;
+                }
+                else {
+
+                    // get x and y of starting point
+                    var startX = line.getAttribute('x1');
+                    var startY = line.getAttribute('y1'); 
+
+                    // x and y of end point when click was released
+                    var shotX = line.getAttribute('x2');
+                    var shotY = line.getAttribute('y2');
+
+                    // scale it to webpage to give it speed
+                    vX = 4*(startX - shotX)
+                    vY = 4*(startY - shotY)
+
+                    // cap speeds at 10000 mm/s
+                    if (vX > 10000){
+                        vX = 10000
+                    }
+
+                    if (vX < - 10000){
+                        vX = - 10000
+                    }
+
+
+                    if (vY > 10000){
+                        vY = 10000
+                    }
+
+                    if (vY < -10000){
+                        vY = -10000
+                    }
+
+                }
+
+                // open server request
+                var to_server = new XMLHttpRequest();
+                to_server.open("POST", "/shoot!", true);
+                to_server.setRequestHeader("Content-Type", "application/json")
+                to_server.onreadystatechange = function () {
+                    if (to_server.readyState === 4 && to_server.status === 200){
+ 
+                        try {
+                            var svgFrames = JSON.parse(to_server.responseText);
+                            // call animation function when data received
+                            displaySVGs(svgFrames);
+                        } catch (e) {
+                            console.error("JSON parsing error:", e);
+                        }
+
+                    }
+                }
+                to_server.send(JSON.stringify({velX: vX, velY: vY}));
+                // get rid of svg line when all is done
+                line.remove()
+            }
+
+            // get mouse coords
+            function convertSVG(evt, svgElem) {
+
+                let svgPoint = svgElem.createSVGPoint();
+                svgPoint.x = evt.clientX;
+                svgPoint.y = evt.clientY;
+                let invertedMatrix = svgElem.getScreenCTM().inverse();
+                return svgPoint.matrixTransform(invertedMatrix);
+            }
+
+            // draw the cue line
+            function drawline() {
+                
+                // if tracking on
+                if (follow) {
+                    // get rid of previous line so there's not 1000000 lines on the page
+                    if (line) line.remove();
+
+                    const frame = document.getElementById('pool-table');
+                    const release = convertSVG(event, frame);
+
+                    // create a new line within table svg
+                    line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+
+                    line.setAttribute("x1", cueX);
+                    line.setAttribute("y1", cueY);
+                    line.setAttribute("x2", release.x);
+                    line.setAttribute("y2", release.y);
+                    line.setAttribute("stroke", "black");
+                    line.setAttribute("stroke-width", "3");
+                    frame.appendChild(line);
+                }
+            }
+
+            // animate the shot!
+            function displaySVGs(svgFrames) {
+                let currentFrameIndex = 0;
+
+                // update svg with current shot frame and prepare next frame after 10 ms delay
+                function displayNextFrame() {
+                    if (currentFrameIndex < svgFrames.length) {
+                        // update innerHTML of svg
+                        document.getElementById('pool-table').innerHTML = svgFrames[currentFrameIndex];
+                        currentFrameIndex++; 
+                        
+                        // too fast if you don't set 10 millisecond delay on next frame
+                        setTimeout(displayNextFrame, 10);
+                    }
+                    else{
+                        // once all frames have been shown, request update on player stats
+                        morePlease();
+                    }
+                }
+
+                // start displaying the frames from the beginning
+                displayNextFrame();
+
+            }
+
+            // request stats update from server
+            function morePlease() {
+
+                // same deal as before
+                var newReq = new XMLHttpRequest();
+                newReq.open("POST", "/stats", true); // Use the correct endpoint
+                newReq.setRequestHeader("Content-Type", "application/json");
+                newReq.onreadystatechange = function() {
+
+                    if (newReq.readyState === 4 && newReq.status === 200) {
+                        try {
+                            // once data received, update ball counts and current player
+                            var stats = JSON.parse(newReq.responseText);
+                            var playerTurnElement = document.getElementById("turn");
+                            var ballsLeftElement = document.getElementById("balls_left");
+                            playerTurnElement.textContent = `${stats.data}`;
+                            ballsLeftElement.innerHTML = stats.p1 + "'s balls remaining: " + stats.p1_count + "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" + stats.p2 + "'s balls remaining: " + stats.p2_count;
+                        } catch (e) {
+                            console.error("JSON parsing error:", e);
+                        }
+
+                    }
+                };
+                // didn't work without sending null string
+                newReq.send(JSON.stringify(null));
+            }
+
+    </script>
+    
+</head>
+    <body>
+        <h1 id="turn">%CURRENT%</h1>
+        <h2 id="balls_left">%P1%'s balls remaining: %P1_COUNT%&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;%P2%'s balls remaining: %P2_COUNT%</h2>
+        <div id="coordinates">Click the cue ball to aim and release to shoot!</div>
+        <svg id="pool-table" onmousemove="drawline(event)" onmouseup="stopfollowingme()" width="700" height="1375" viewBox="-350 -25 1400 2750" xmlns="http://www.w3.org/2000/svg">
+            %SVG_CONTENT%
+        </svg>   
+    </body>
+</html>

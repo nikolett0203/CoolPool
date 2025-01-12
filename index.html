@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang=""en>
+    <head>
+        <link rel="stylesheet" href="index.css">
+        <meta charset="utf-8">
+        <title>Let's Play Pool!</title>
+    </head>
+    <body>
+        <h1>Let's play 8-ball pool!</h1>
+        <h3>Please enter both players' names and a game name to continue.</h3>
+        <form action="/play.html" method="get" id="playerNamesForm" style="text-align: center;">
+            <div class="input-container">
+                <input type="text" name="player1" id="P1" required>
+                <label for="P1">Player 1's Name</label>
+            </div>
+            <div class="input-container">
+                <input type="text" name="player2" id="P2" required>
+                <label for="P2">Player 2's Name</label>
+            </div>
+            <div class="input-container">
+                <input type="text" name="game_name" id="GAME" required>
+                <label for="GAME">Game Name</label>
+            </div>
+            <div class="submit-button">
+                <input type="submit" value="Submit">
+            </div>
+            <img src="./images/ball.png">
+        </form>
+    </body>
+</html>
