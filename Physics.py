@@ -405,13 +405,14 @@ class Database:
     def createDB(self):
         self.cur = self.conn.cursor()
         self.cur.execute(""" CREATE TABLE IF NOT EXISTS Ball (
-                        BALLID      INTEGER NOT NULL,
+                        BALLID      INTEGER PRIMARY KEY AUTOINCREMENT,
                         BALLNO      INTEGER NOT NULL,
                         XPOS        FLOAT NOT NULL,
                         YPOS        FLOAT NOT NULL,
                         XVEL        FLOAT,
-                        YVEL        FLOAT,
-                        PRIMARY KEY (BALLID));""")
+                        YVEL        FLOAT);""")
+        
+        self.cur.execute("CREATE INDEX IF NOT EXISTS idx_ball_number ON Ball(BALLNO);")
 
         self.cur.execute(""" CREATE TABLE IF NOT EXISTS TTable (
                         TABLEID     INTEGER NOT NULL,
@@ -423,6 +424,8 @@ class Database:
                         TABLEID     INTEGER NOT NULL,
                         FOREIGN KEY (BALLID) REFERENCES Ball,
                         FOREIGN KEY (TABLEID) REFERENCES TTable);""")
+        
+        self.cur.execute("CREATE INDEX IF NOT EXISTS idx_table_id ON BallTable(TABLEID);")
 
         self.cur.execute(""" CREATE TABLE IF NOT EXISTS Game (
                         GAMEID      INTEGER NOT NULL,
@@ -436,6 +439,8 @@ class Database:
                         PRIMARY KEY (PLAYERID),
                         FOREIGN KEY (GAMEID) REFERENCES Game);""")
 
+        self.cur.execute("CREATE INDEX IF NOT EXISTS idx_player_game ON Player(GAMEID);")
+
         self.cur.execute(""" CREATE TABLE IF NOT EXISTS Shot (
                         SHOTID      INTEGER NOT NULL,
                         PLAYERID    INTEGER NOT NULL,
@@ -443,6 +448,8 @@ class Database:
                         PRIMARY KEY (SHOTID),
                         FOREIGN KEY (PLAYERID) REFERENCES Player,
                         FOREIGN KEY (GAMEID) REFERENCES Game);""")
+        
+        self.cur.execute("CREATE INDEX IF NOT EXISTS idx_shot_player ON Shot(PLAYERID);")
 
         self.cur.execute(""" CREATE TABLE IF NOT EXISTS TableShot (
                         TABLEID     INTEGER NOT NULL,
