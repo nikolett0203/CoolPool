@@ -40,7 +40,7 @@ FRAME_INTERVAL = 0.01
 # https://billiards.colostate.edu/faq/ball/colors/
 BALL_COLOURS = [ 
     "WHITE",
-    "YELLOW",
+    "GOLD",
     "BLUE",
     "RED",
     "PURPLE",
@@ -48,13 +48,13 @@ BALL_COLOURS = [
     "GREEN",
     "BROWN",
     "BLACK",
-    "LIGHTYELLOW",
-    "LIGHTBLUE",
-    "PINK",             # no LIGHTRED
-    "MEDIUMPURPLE",     # no LIGHTPURPLE
-    "LIGHTSALMON",      # no LIGHTORANGE
-    "LIGHTGREEN",
-    "SANDYBROWN",       # no LIGHTBROWN 
+    "GOLD",
+    "BLUE",
+    "RED",        # no LIGHTRED
+    "PURPLE",     # no LIGHTPURPLE
+    "ORANGE",      # no LIGHTORANGE
+    "GREEN",
+    "BROWN",       # no LIGHTBROWN 
     ]
 
 ################################################################################
@@ -93,17 +93,37 @@ class StillBall(phylib.phylib_object):
     def svg (self):
 
         if (self.obj.still_ball.number == 0):
-            return """ <circle id="cue" onmousedown="followme()" cx="%d" cy="%d" r="%d" fill="%s" />\n""" % (self.obj.still_ball.pos.x,
+            svg = """ <circle id="cue" onmousedown="followme()" cx="%d" cy="%d" r="%d" fill="%s" />\n""" % (self.obj.still_ball.pos.x,
                                                                         self.obj.still_ball.pos.y,
                                                                         BALL_RADIUS,
                                                                         BALL_COLOURS[self.obj.still_ball.number])
-        else:
-            return """ <circle cx="%d" cy="%d" r="%d" fill="%s" />\n""" % (self.obj.still_ball.pos.x,
+        elif (0 < self.obj.still_ball.number < 9):
+            svg = """ <circle cx="%d" cy="%d" r="%d" fill="%s" />\n""" % (self.obj.still_ball.pos.x,
                                                                         self.obj.still_ball.pos.y,
                                                                         BALL_RADIUS,
-                                                                        BALL_COLOURS[self.obj.still_ball.number])                        
+                                                                        BALL_COLOURS[self.obj.still_ball.number])
+        else:        
+            stripe_height = BALL_RADIUS * 0.5
 
+            svg = """<circle cx="%d" cy="%d" r="%d" fill="white" />\n
+                    <rect x="%d" y="%d" width="%d" height="%d" fill="%s" />\n""" % (self.obj.still_ball.pos.x,
+                                                                        self.obj.still_ball.pos.y,
+                                                                        BALL_RADIUS,
+                                                                        self.obj.still_ball.pos.x - BALL_RADIUS,
+                                                                        self.obj.still_ball.pos.y - stripe_height / 2,
+                                                                        BALL_RADIUS * 2,
+                                                                        stripe_height,
+                                                                        BALL_COLOURS[self.obj.still_ball.number])
 
+        # add outline to make it more visible
+        svg += """<circle cx="%d" cy="%d" r="%d" fill="none" stroke="black" stroke-width="4" />\n""" % (
+                                                                    self.obj.still_ball.pos.x,
+                                                                    self.obj.still_ball.pos.y,
+                                                                    BALL_RADIUS)
+        
+        return svg
+        
+    
 
 # rolling ball class that calls constructor from phylib.c and generates svg string
 class RollingBall(phylib.phylib_object):
@@ -124,15 +144,43 @@ class RollingBall(phylib.phylib_object):
     def svg(self):
 
         if (self.obj.still_ball.number == 0):
-            return """ <circle id="cue" onmousedown="followme()" cx="%d" cy="%d" r="%d" fill="%s" />\n""" % (self.obj.rolling_ball.pos.x, 
+            svg = """ <circle id="cue" onmousedown="followme()" cx="%d" cy="%d" r="%d" fill="%s" />\n""" % (self.obj.rolling_ball.pos.x, 
                                                                         self.obj.rolling_ball.pos.y, 
                                                                         BALL_RADIUS, 
                                                                         BALL_COLOURS[self.obj.rolling_ball.number])
+        elif(0 < self.obj.still_ball.number < 9):
+            svg = """ <circle cx="%d" cy="%d" r="%d" fill="%s" />\n""" % (self.obj.rolling_ball.pos.x, 
+                                                                        self.obj.rolling_ball.pos.y, 
+                                                                        BALL_RADIUS, 
+                                                                        BALL_COLOURS[self.obj.rolling_ball.number])
+        
         else:
-            return """ <circle cx="%d" cy="%d" r="%d" fill="%s" />\n""" % (self.obj.rolling_ball.pos.x, 
-                                                                        self.obj.rolling_ball.pos.y, 
-                                                                        BALL_RADIUS, 
+            stripe_height = BALL_RADIUS * 0.5
+
+            svg = """<circle cx="%d" cy="%d" r="%d" fill="white" />\n
+                    <rect x="%d" y="%d" width="%d" height="%d" fill="%s" />\n""" % (self.obj.rolling_ball.pos.x,
+                                                                        self.obj.rolling_ball.pos.y,
+                                                                        BALL_RADIUS,
+                                                                        self.obj.rolling_ball.pos.x - BALL_RADIUS,
+                                                                        self.obj.rolling_ball.pos.y - stripe_height / 2,
+                                                                        BALL_RADIUS * 2,
+                                                                        stripe_height,
                                                                         BALL_COLOURS[self.obj.rolling_ball.number])
+
+        # add outline to make it more visible
+        svg += """<circle cx="%d" cy="%d" r="%d" fill="none" stroke="black" stroke-width="4" />\n""" % (
+                                                                    self.obj.rolling_ball.pos.x,
+                                                                    self.obj.rolling_ball.pos.y,
+                                                                    BALL_RADIUS)
+        
+        return svg            
+
+
+        svg += """<circle cx="%d" cy="%d" r="%d" fill="none" stroke="black" stroke-width="4" />\n""" % (
+                                                                        self.obj.still_ball.pos.x,
+                                                                        self.obj.still_ball.pos.y,
+                                                                        BALL_RADIUS)
+        return svg
 
 
 # hole class that calls constructor from phylib.c and generates svg string
