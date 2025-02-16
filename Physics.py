@@ -415,9 +415,8 @@ class Database:
         self.cur.execute("CREATE INDEX IF NOT EXISTS idx_ball_number ON Ball(BALLNO);")
 
         self.cur.execute(""" CREATE TABLE IF NOT EXISTS TTable (
-                        TABLEID     INTEGER NOT NULL,
-                        TIME        FLOAT NOT NULL,
-                        PRIMARY KEY (TABLEID));""")
+                        TABLEID     INTEGER PRIMARY KEY AUTOINCREMENT,
+                        TIME        FLOAT NOT NULL);""")
 
         self.cur.execute(""" CREATE TABLE IF NOT EXISTS BallTable (
                         BALLID      INTEGER NOT NULL,
@@ -457,56 +456,74 @@ class Database:
                         FOREIGN KEY (TABLEID) REFERENCES TTable,
                         FOREIGN KEY (SHOTID) REFERENCES Shot);""")
         
+        self.cur.execute("CREATE INDEX IF NOT EXISTS idx_balltable_ballid ON BallTable(BALLID);")
+        self.cur.execute("CREATE INDEX IF NOT EXISTS idx_ttable_time ON TTable(TIME);")
+
+        
         self.conn.commit()
         self.cur.close()
 
-    # this function writes several tables to the database on a single commit to improve speed
+
     def writeManyTables(self, tables):
 
         if tables is None:
             return None
 
+        tableIDs = []   # track table IDs
+        ballData = []   # track ballIDs
+        ballTableData = []  # correspond table IDs to ballIDs
+
         self.cur = self.conn.cursor()  
 
-        tableIDs = []
+        # find the previous max table ID
+        self.cur.execute("""SELECT max(ROWID) from TTable""")
+        oldMaxTT = self.cur.fetchone()[0] or 0
 
-        # first get table ids
-        for table in tables:
-            self.cur.execute("""INSERT INTO TTable (TIME) VALUES (?);""", (table.time,))
-            tableIDs.append(self.cur.lastrowid)
+        # fill TTable with times
+        table_data = [(table.time,) for table in tables]
+        self.cur.executemany("""INSERT INTO TTable (TIME) VALUES (?);""", table_data)
 
-        # then start addign balls
+        # get IDs of new times
+        self.cur.execute("""SELECT TABLEID FROM TTable WHERE ROWID > ? ORDER BY ROWID ASC""", (oldMaxTT,))
+        tableIDs = [row[0] for row in self.cur.fetchall()]
+
+        # get previous highest ball ID
+        self.cur.execute("""SELECT max(ROWID) from Ball""")
+        oldMaxB = self.cur.fetchone()[0] or 0
+
+        # collect data on balls per time
         for table, tableID in zip(tables, tableIDs):
             for object in table:
                 if isinstance(object, StillBall):
-                    ballNum = object.obj.still_ball.number
-                    posX = object.obj.still_ball.pos.x
-                    posY = object.obj.still_ball.pos.y
-                    velX = None
-                    velY = None 
+                    ballData.append((object.obj.still_ball.number, 
+                                     object.obj.still_ball.pos.x, 
+                                     object.obj.still_ball.pos.y, 
+                                     None, 
+                                     None))
+                    # track the ID associated with each ball
+                    ballTableData.append(tableID)
+                elif isinstance(object, RollingBall):
+                    ballData.append((object.obj.rolling_ball.number, 
+                                     object.obj.rolling_ball.pos.x, 
+                                     object.obj.rolling_ball.pos.y, 
+                                     object.obj.rolling_ball.vel.x, 
+                                     object.obj.rolling_ball.vel.y))
+                    ballTableData.append(tableID)
+                    
+        # now we insert our ball data
+        self.cur.executemany("""INSERT INTO Ball (BALLNO, XPOS, YPOS, XVEL, YVEL) VALUES (?, ?, ?, ?, ?);""", ballData)
 
-                    self.cur.execute("""INSERT INTO Ball (BALLNO, XPOS, YPOS, XVEL, YVEL)
-                                        VALUES (?, ?, ?, ?, ?);""", (ballNum, posX, posY, velX, velY))
-                    ballID = self.cur.lastrowid
+        # then we collect all the ball IDs associated with them 
+        self.cur.execute("""SELECT BALLID FROM Ball WHERE ROWID > ? ORDER BY ROWID ASC""", (oldMaxB,))
+        ballIDs = [row[0] for row in self.cur.fetchall()]
+        
+        print("error check: ", len(ballIDs), "    ", len(ballTableData))
 
-                    self.cur.execute("""INSERT INTO BallTable (BALLID, TABLEID)
-                                        VALUES (?, ?);""", (ballID, tableID))
+        # finally we fill the balltable with the ids
+        ballTablePairs = list(zip(ballIDs, ballTableData))
+        self.cur.executemany("""INSERT INTO BallTable (BALLID, TABLEID) VALUES (?, ?);""", ballTablePairs)
 
-                elif isinstance(object, RollingBall): 
-                    ballNum = object.obj.rolling_ball.number
-                    posX = object.obj.rolling_ball.pos.x
-                    posY = object.obj.rolling_ball.pos.y
-                    velX = object.obj.rolling_ball.vel.x
-                    velY = object.obj.rolling_ball.vel.y
-
-                    self.cur.execute("""INSERT INTO Ball (BALLNO, XPOS, YPOS, XVEL, YVEL)
-                                        VALUES (?, ?, ?, ?, ?);""", (ballNum, posX, posY, velX, velY))
-                    ballID = self.cur.lastrowid
-
-                    self.cur.execute("""INSERT INTO BallTable (BALLID, TABLEID)
-                                        VALUES (?, ?);""", (ballID, tableID))
-
-        # commit once at the end
+        # # commit once at the end
         self.conn.commit()
         self.cur.close()
 
