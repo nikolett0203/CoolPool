@@ -1,0 +1,26 @@
+@font-face {
+    font-family: 'Title';
+    src: url(fonts/RubikScribble-Regular.ttf);
+}
+
+.navbar{
+    background-color: #b496d6;
+    font-family: Title;
+}
+
+.card {
+    background-color: #b496d6;  
+}
+
+.signin-text {
+    font-family: Title;   
+    color: white;
+}
+
+.btn-light {
+    font-family: Title;  
+}
+
+.form-control {
+    text-align: center;
+}
