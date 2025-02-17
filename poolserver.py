@@ -10,6 +10,8 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 
 from urllib.parse import urlparse, parse_qsl;
 
+PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8000
+
 class MyHandler (BaseHTTPRequestHandler): 
 
     first = 0
@@ -373,11 +375,16 @@ class MyHandler (BaseHTTPRequestHandler):
 
 # check if program is being run directly or if it's imported
 # if run directly, this code will execute
-if __name__ == "__main__":
+# if __name__ == "__main__":
     # create instance of HTTPServer class, makes server address as tuple
     # containing 'localhost' as the hostname and port number
     # MyHandler is the request handling class
-    httpd = HTTPServer(('localhost', int(sys.argv[1])), MyHandler)
-    print("Server listing in port:  ", int(sys.argv[1]))
-    # let server listen to request indefinitely using serve_forever method
+    # httpd = HTTPServer(('localhost', int(sys.argv[1])), MyHandler)
+    # print("Server listing in port:  ", int(sys.argv[1]))
+    # # let server listen to request indefinitely using serve_forever method
+    # httpd.serve_forever()
+
+if __name__ == "__main__":
+    httpd = HTTPServer(('0.0.0.0', PORT), MyHandler)
+    print(f"Server listening on port {PORT}...")
     httpd.serve_forever()
