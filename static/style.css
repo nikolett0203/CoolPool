@@ -3,6 +3,11 @@
     src: url(fonts/RubikScribble-Regular.ttf);
 }
 
+@font-face {
+    font-family: 'Text';
+    src: url(fonts/DMSans-VariableFont_opsz\,wght.ttf);
+}
+
 .navbar{
     background-color: #b496d6;
     font-family: Title;
@@ -12,8 +17,13 @@
     background-color: #b496d6;  
 }
 
-.signin-text {
+.subtitle-text {
     font-family: Title;   
+    color: white;
+}
+
+.card-text {
+    font-family: Text;   
     color: white;
 }
 
@@ -23,4 +33,20 @@
 
 .form-control {
     text-align: center;
+}
+
+.svg-container {
+    display: flex;
+    display: flex;
+    justify-content: center; /* Center horizontally */
+    align-items: center; /* Center vertically */
+    flex-grow: 1; /* Allow container to take up available space */
+}
+
+.svg-container svg {
+    width: auto;
+    height: 100%;
+    max-width: 800px;
+    max-height: 800px;
+    display: block;
 }

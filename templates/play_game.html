@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container-fluid">
+    <div class="row justify-content-center align-items-center px-md-5">
+        <div class="col-md-3 text-center my-3">
+            <div class="card">
+                <div class="card-body">
+                    <h3 class="card-title subtitle-text">Game Stats:</h3>
+                    <p class="card-text p1balls">{{ player1 }}'s remaining balls: {{ p1_count }}</p>
+                    <p class="card-text p2balls">{{ player2 }}'s remaining balls: {{ p2_count }}</p>
+                    <p class="card-text curr">Current Player: {{ current }}</p>
+                </div>
+            </div>
+        </div>
+        <div id="pool-table" class="col-md-6 text-center svg-container">
+            {{ svg_data | safe }} 
+        </div>
+        <div class="col-md-3 text-center my-3">
+            <div class="card">
+                <div class="card-body">
+                    <h3 class="card-title subtitle-text">Ball Assignments:</h3>
+                    <p class="card-text solids">Solids: {{ lo_balls }}</p>
+                    <p class="card-text stripes">Stripes: {{ hi_balls }}</p>
+                    <p class="card-text eight">First to sink the 8-ball wins!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.3/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+<script src="{{ url_for('static', filename='poolshot.js') }}"></script>
+
+{% endblock %}

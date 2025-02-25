@@ -61,6 +61,7 @@ typedef struct {
 } phylib_vcushion;
 
 /* POLYMORPHIC PARENT CLASS OF TABLE OBJECTS */
+/* ALLOWS STORING ANY TYPE OF TABLE OBJECT USING SAME MEMORY SPACE! */
 typedef union {
     phylib_still_ball still_ball;
     phylib_rolling_ball rolling_ball;
@@ -69,6 +70,7 @@ typedef union {
     phylib_vcushion vcushion;
 } phylib_untyped;
 
+/* POLYMORPHISM BY ALLOWING SINGLE PHYLIB_OBJECT TO REP ANY POOL OBJ */
 typedef struct {
     phylib_obj type;        // type of variable, e.g. hole, ball,...
     phylib_untyped obj;     // memory to store variable

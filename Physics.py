@@ -93,7 +93,7 @@ class StillBall(phylib.phylib_object):
     def svg (self):
 
         if (self.obj.still_ball.number == 0):
-            svg = """ <circle id="cue" onmousedown="followme()" cx="%d" cy="%d" r="%d" fill="%s" />\n""" % (self.obj.still_ball.pos.x,
+            svg = """ <circle id="cue" onmousedown="followme(event)" cx="%d" cy="%d" r="%d" fill="%s" />\n""" % (self.obj.still_ball.pos.x,
                                                                         self.obj.still_ball.pos.y,
                                                                         BALL_RADIUS,
                                                                         BALL_COLOURS[self.obj.still_ball.number])
@@ -144,7 +144,7 @@ class RollingBall(phylib.phylib_object):
     def svg(self):
 
         if (self.obj.still_ball.number == 0):
-            svg = """ <circle id="cue" onmousedown="followme()" cx="%d" cy="%d" r="%d" fill="%s" />\n""" % (self.obj.rolling_ball.pos.x, 
+            svg = """ <circle id="cue" onmousedown="followme(event)" cx="%d" cy="%d" r="%d" fill="%s" />\n""" % (self.obj.rolling_ball.pos.x, 
                                                                         self.obj.rolling_ball.pos.y, 
                                                                         BALL_RADIUS, 
                                                                         BALL_COLOURS[self.obj.rolling_ball.number])
@@ -447,7 +447,7 @@ class Database:
 
         # open a database connection to allow sqlite3 to work with it
         # connection object represents connection to on-disk database file
-        self.conn = sqlite3.connect('phylib.db')
+        self.conn = sqlite3.connect('phylib.db', check_same_thread=False)
 
     # method to create tables for ball, time, games, player, and shot info
     def createDB(self):
@@ -784,25 +784,60 @@ class Database:
     # method to commit and close database connection
     def close (self):
         self.conn.commit()
-        self.conn.close()  
+        self.conn.close()     
         
 # class to initialise game and control game logic
 class Game:
 
     # class variable to track if the first ball has been sunk
-    first = 0
 
     def __init__ (self, gameID=None, gameName=None, player1Name=None, player2Name=None):
+
+        # make db
         self.db = Database()
         self.db.createDB()
+
+        # store game data in db
         if gameID is not None and isinstance(gameID, int) and gameName is player1Name is player2Name is None:
             data = self.db.getGame(gameID)
             _, _, player1Name, _, gameName = data[0]
             _, _, player2Name, _, _ = data[1]
+
         elif gameID is None and isinstance(gameName, str) and isinstance (player1Name, str) and isinstance(player2Name, str):
             gameID = self.db.setGame(gameName, player1Name, player2Name)
+
         else:
             raise TypeError("Invalid input")
+        
+        self.first = 0
+
+        self.firstBall = False
+
+        # current player?
+        self.current = random.randint(1,2)
+
+        # who gets which balls
+        self.high = None
+        self.low = None
+
+        self.p1 = player1Name
+        self.p2 = player2Name
+
+        self.game_name = gameName
+
+        self.prev_hi_len = 7
+        self.prev_lo_len = 7
+
+        self.low_balls = [1,2,3,4,5,6,7]
+        self.high_balls = [9,10,11,12,13,14,15]
+
+        self.table = self.initialiseTable()
+        
+        self.gameover = False
+
+        self.winner = None
+        self.loser = None
+
 
     # method to execute a single pool shot
     def shoot (self, gameName, playerName, table, xvel, yvel):
@@ -866,12 +901,12 @@ class Game:
                     tableData.append(timeTable)
 
                 # determine the first ball
-                if not Game.first:
+                if not self.first:
                     i = 0
                     for object in newTable:
                         if object is None and i != 25:
                             firstBall = i - 10
-                            Game.first = 1
+                            self.first = 1
                         i+=1                 
 
             table = newTable
@@ -1059,3 +1094,170 @@ class Game:
             svg_frames.append(frame)
 
         return svg_frames, table
+    
+    def get_table(self):
+        return self.table
+    
+    def get_current(self):
+        return self.current
+    
+    def assign_hilo(self, firstBall):
+
+        if 1<= firstBall <=  7:
+            if self.current == 1:
+                self.low = 1
+                self.high = 2
+            else:
+                self.low = 2
+                self.high = 1
+        else:
+            if self.current == 1:
+                self.low = 2
+                self.high = 1
+            else:
+                self.low = 1
+                self.high = 2
+        
+    def game_state(self, low_left, high_left, eight):
+
+        if self.current == self.low:
+            if not eight:
+                if not low_left:
+                    self.gameover = True
+                    self.winner = self.current
+                    self.loser = 2 if self.current == 1 else 1
+                    return True
+                else: 
+                    self.gameover = True
+                    self.loser = self.current
+                    self.winner = 2 if self.current == 1 else 1
+                    return True       
+        elif self.current == self.high:
+            if not eight:
+                if not high_left:
+                    self.gameover = True
+                    self.winner = self.current
+                    self.loser = 2 if self.current == 1 else 1
+                    return True # game over 
+                else: 
+                    self.gameover = True
+                    self.loser = self.current
+                    self.winner = 2 if self.current == 1 else 1
+                    return True # game over 
+        else:
+            if not eight: 
+                self.gameover = True
+                self.loser = self.current
+                self.winner = 2 if self.current == 1 else 1  
+
+    def game_logic(self, vX, vY):
+
+        curr_player = self.p1 if self.current == 1 else self.p2
+
+        print("CURRENT 3: ", self.current)
+
+        pass_table = self.table
+
+        shotID, firstBall = self.shoot(self.game_name, curr_player, pass_table, vX, vY)
+        svg_frames, self.table = self.getShotTables(shotID)
+
+        if firstBall is not None:
+            print(firstBall)
+            self.assign_hilo(firstBall)
+            self.firstBall = True
+
+        self.table, self.low_balls, self.high_balls, eight = self.table.replace_cue_find_sunk(self.table.time)
+        self.game_state(self.low_balls, self.high_balls, eight)
+
+        print(self.high_balls, self.low_balls)
+
+        if self.firstBall:
+            print("here 11")
+            if self.current == self.low:
+                print("here 12")
+                if self.prev_lo_len == len(self.low_balls):
+                    self.current = 2 if self.current == 1 else 1
+            elif self.current == self.high:
+                print("here 13")
+                if self.prev_hi_len == len(self.high_balls):
+                    self.current = 2 if self.current == 1 else 1  
+
+        else:
+            # if balls not assigned yet, just switch normally
+            print("B4: ", self.current)
+            self.current = 2 if self.current == 1 else 1  
+            print("AFTER: ", self.current)
+    #                 print("here 12", MyHandler.current)
+    #                 # PLAYER 1 HIT PLAYER 2 BALL AND IT SUNK
+
+        self.prev_lo_len = len(self.low_balls)         
+        self.prev_hi_len = len(self.high_balls) 
+
+        svg_frames.append(self.table.svg())
+
+        if self.gameover:
+
+            if self.winner == 1:
+                wins = self.p1
+            else:
+                wins = self.p2
+
+            final_frame=f"""<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+                                <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+                                "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+                                <svg width="700" height="1375" viewBox="-25 -25 1400 2750"
+                                xmlns="http://www.w3.org/2000/svg"
+                                xmlns:xlink="http://www.w3.org/1999/xlink">
+                                <rect width="1350" height="2700" x="0" y="0" fill="#C0D0C0" /> 
+                                <rect width="1400" height="25" x="-25" y="-25" fill="darkgreen" />
+                                <text x="50%" y="33%" text-anchor="middle" font-family="Title" font-size="150" fill="green">GAME OVER!</text>
+                                <text x="50%" y="66%" text-anchor="middle" font-family="Title" font-size="150" fill="green">{wins} Wins!</text>
+                                <rect width="1400" height="25" x="-25" y="2700" fill="darkgreen" />
+                                <rect width="25" height="2750" x="-25" y="-25" fill="darkgreen" />
+                                <rect width="25" height="2750" x="1350" y="-25" fill="darkgreen" />
+                                <circle cx="0" cy="0" r="114" fill="black" />
+                                <circle cx="0" cy="1350" r="114" fill="black" />
+                                <circle cx="0" cy="2700" r="114" fill="black" />
+                                <circle cx="1350" cy="0" r="114" fill="black" />
+                                <circle cx="1350" cy="1350" r="114" fill="black" />
+                                <circle cx="1350" cy="2700" r="114" fill="black" />
+                                </svg>"""
+            svg_frames.append(final_frame)
+
+        return svg_frames
+
+    def get_gamestatus(self):
+        return self.gameover
+    
+    def get_currentplayer(self):
+        return self.current
+    
+    def get_highballs(self):
+        return len(self.high_balls)
+    
+    def get_lowballs(self):
+        return len(self.low_balls)
+    
+    def get_assignment(self):
+        if self.firstBall:
+            return self.high
+        else:
+            return None
+    
+    def get_low_assignment(self):
+        if self.firstBall:
+            if self.low == 1:
+                return self.p1
+            else:
+                return self.p2
+        else:
+            return "Unassigned"
+    
+    def get_high_assignment(self):
+        if self.firstBall:
+            if self.high == 1:
+                return self.p1
+            else:
+                return self.p2
+        else:
+            return "Unassigned"
